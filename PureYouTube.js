@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PureYouTube
 // @namespace    https://github.com/wandersons13/PureYouTube
-// @version      0.1
+// @version      0.2
 // @description  Cinematic layout, bloat-free performance and instant loading.
 // @author       wandersons13
 // @match        *://www.youtube.com/*
@@ -11,11 +11,17 @@
 // @license      GNU
 // ==/UserScript==
 
-(function() {
+(function () {
     'use strict';
 
     const noop = () => {};
-    window.ytcsi = { tick: noop, span: noop, info: noop, setTick: noop, lastTick: noop };
+    window.ytcsi = {
+        tick: noop,
+        span: noop,
+        info: noop,
+        setTick: noop,
+        lastTick: noop
+    };
     window.ytStats = noop;
 
     const css = `
@@ -28,6 +34,19 @@
             --ytd-masthead-height: 0px !important;
             background-color: #000 !important;
             overflow-x: hidden !important;
+        }
+
+        body.is-watch-page #page-manager {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+        }
+
+        body.is-watch-page #masthead-container {
+            position: absolute !important;
+            top: 100vh !important;
+            left: 0 !important;
+            width: 100% !important;
+            z-index: 50 !important;
         }
 
         body.is-watch-page #player-theater-container,
@@ -47,36 +66,19 @@
             background: #000 !important;
             margin: 0 !important;
             padding: 0 !important;
-            transform: none !important;
             object-fit: contain !important;
-            transition: all 0.1s ease !important;
-        }
-
-        body.is-watch-page #masthead-container {
-            position: absolute !important;
-            top: 100vh !important;
-            left: 0 !important;
-            width: 100% !important;
-            z-index: 50 !important;
-            display: block !important;
         }
 
         body.is-watch-page ytd-watch-flexy {
-            padding-top: calc(100vh + 56px) !important;
-            margin: 0 !important;
-            position: relative !important;
+            padding-top: calc(100vh + 20px) !important;
+            margin-top: 0 !important;
             display: block !important;
         }
 
         body.is-watch-page #columns.ytd-watch-flexy {
-            display: flex !important;
-            width: 100% !important;
-            max-width: 1280px !important;
-            margin: 0 auto !important;
+            margin-top: 0 !important;
+            padding-top: 0 !important;
         }
-
-        body.is-watch-page #primary.ytd-watch-flexy { flex: 1 !important; padding-right: 24px !important; }
-        body.is-watch-page #secondary.ytd-watch-flexy { width: 380px !important; }
 
         * { box-shadow: none !important; text-shadow: none !important; }
     `;
@@ -94,22 +96,28 @@
 
         if (isWatch) {
             window.dispatchEvent(new Event('resize'));
-            const theaterBtn = document.querySelector('.ytp-size-button');
             const watch = document.querySelector('ytd-watch-flexy');
+            const theaterBtn = document.querySelector('.ytp-size-button');
+
             if (theaterBtn && watch && !watch.hasAttribute('theater')) {
                 theaterBtn.click();
             }
         }
     };
 
-    window.addEventListener('yt-navigate-finish', applyFix);
-    window.addEventListener('yt-page-type-changed', applyFix);
+    window.addEventListener('yt-navigate-finish', () => {
+        applyFix();
+        setTimeout(applyFix, 100);
+        setTimeout(applyFix, 500);
+    });
 
     const init = () => {
         applyFix();
         const app = document.querySelector('ytd-app');
         if (app) {
-            new MutationObserver(applyFix).observe(app, { attributes: true, attributeFilter: ['theater'] });
+            new MutationObserver(applyFix).observe(app, {
+                attributes: true
+            });
         }
     };
 
@@ -118,4 +126,11 @@
     } else {
         init();
     }
+
+    setInterval(() => {
+        if (location.pathname === '/watch' && document.body && !document.body.classList.contains('is-watch-page')) {
+            applyFix();
+        }
+    }, 1000);
+
 })();
