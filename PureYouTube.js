@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PureYouTube
 // @namespace    https://github.com/wandersons13/PureYouTube
-// @version      0.5
+// @version      0.6
 // @description  Cinematic layout, bloat-free performance and instant loading.
 // @author       wandersons13
 // @match        *://www.youtube.com/*
@@ -23,6 +23,25 @@
         lastTick: noop
     };
     window.ytStats = noop;
+
+    const root = document.head || document.documentElement;
+
+    const preconnect = [
+        'https://www.youtube.com',
+        'https://i.ytimg.com',
+        'https://s.ytimg.com',
+        'https://rr1---sn.googlevideo.com',
+        'https://rr2---sn.googlevideo.com',
+        'https://youtubei.googleapis.com'
+    ];
+
+    preconnect.forEach((url) => {
+        const link = document.createElement('link');
+        link.rel = 'preconnect';
+        link.href = url;
+        link.crossOrigin = 'anonymous';
+        root.appendChild(link);
+    });
 
     const css = `
         #chat, #masthead-ad, ytd-ad-slot-renderer, ytd-merch-shelf-renderer,
@@ -87,18 +106,33 @@
     const style = document.createElement('style');
     style.id = 'pure-yt-final';
     style.textContent = css;
-    (document.head || document.documentElement).appendChild(style);
+    root.appendChild(style);
 
     const applyFix = () => {
         const isWatch = location.pathname === '/watch';
         if (document.body) {
             document.body.classList.toggle('is-watch-page', isWatch);
         }
-
         if (isWatch) {
             window.dispatchEvent(new Event('resize'));
         }
     };
+
+    const earlyApply = () => {
+        if (location.pathname === '/watch' && document.documentElement) {
+            document.documentElement.classList.add('is-watch-page');
+        }
+    };
+
+    document.addEventListener('yt-navigate-start', () => {
+        earlyApply();
+
+        const v = document.querySelector('video');
+        if (v) {
+            v.pause();
+            setTimeout(() => v.play().catch(() => {}), 150);
+        }
+    }, true);
 
     window.addEventListener('yt-navigate-finish', () => {
         applyFix();
@@ -107,7 +141,9 @@
     });
 
     const init = () => {
+        earlyApply();
         applyFix();
+
         const app = document.querySelector('ytd-app');
         if (app) {
             new MutationObserver(applyFix).observe(app, {
